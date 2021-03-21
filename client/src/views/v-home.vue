@@ -1,8 +1,8 @@
 <template>
   <section>
-    <h1>
+    <h4>
       Каталог
-    </h1>
+    </h4>
     <v-catalog-product type v-for="product in products" :key="product.id" :product="product"/>
   </section>
 
@@ -16,17 +16,17 @@ export default {
   name: "v-home",
   components: {VCatalogProduct},
   setup() {
-
     const products = computed(() => {
       return store.state.products
     })
+
     return {
-      products
+      products,
     }
   },
   mounted() {
     this.$store.dispatch('getAllProducts')
-    this.$store.dispatch('getAllProductsFromCart')
+    this.$store.dispatch('getCartProducts')
   }
 };
 </script>

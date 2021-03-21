@@ -1,53 +1,122 @@
-import {createStore} from 'vuex'
+import { createStore } from "vuex";
+import createPersistedState from "vuex-persistedstate";
 import axios from "axios";
 
 export default createStore({
-    state: {
-        products: [],
-        cart: []
+  state: {
+    products: [],
+    cart: [],
+  },
+  plugins: [createPersistedState()],
+  mutations: {
+    // Полученные товары созраняем в хранилище Vuex
+    getAllProducts(state, payload) {
+      state.products = payload;
     },
-    mutations: {
-        // Полученные товары созраняем в хранилище Vuex
-        getAllProducts(state, payload) {
-            state.products = payload
-        },
 
-        // Получение товары из корзины БД сохраняем в хранилище Vuex
-        getAllProductsFromCart(state, payload) {
-            state.cart = payload
-        },
+    // Добавление товара в корзину
+    async putProductToCart(state, payloads) {
+      const { id, qty, price, discount } = payloads;
+      await axios
+        .post("/api/cart", {
+          productId: id,
+          price,
+          qty,
+          discount,
+        })
+        .then((res) => {
+          state.cart.push({
+            ...payloads,
+            isDelete: res.data.is_delete,
+            productCartId: res.data.id,
+          });
+        });
+    },
 
-        // Отправка товара в корзину БД
-        async postProductToCart(state, payload) {
-            const {id, price, qty, discount} = payload
-            await axios.post('/api/cart', {
-                productId: id,
-                total_price: price,
-                qty: qty,
-                discount: discount
-            })
+    // Удаление товара из корзины
+    removeProductFromCart(state, payloads) {
+      state.cart.map((i) => {
+        if (i.productCartId === payloads) {
+          state.cart.splice(i, 1);
+          axios.delete(`/api/cart?idCartProduct=${payloads}`).then();
         }
-
+      });
     },
-    actions: {
-        // Получени из БД каталог товаров и передача
-        async getAllProducts(context) {
-            const products = await axios.get('/api/products').then(res => res.data)
-            context.commit('getAllProducts', products)
-        },
 
-        // Получение из БД список товаров корзины
-        async getAllProductsFromCart(context) {
-            const cartProducts = await axios.get('/api/cart').then(res => {
-                if (res.data) {
-                    return res.data
-                }
-            }).catch(e => console.log(e))
-            context.commit('getAllProductsFromCart', cartProducts)
-        },
+    getCartProducts(state, payloads) {},
+
+    // Увеличение кол-ва товара в корзине
+    incrementQty(state, payloads) {
+      let { qty, productId, price } = payloads;
+      state.cart.map((i) => {
+        if (i.qty >= 0) {
+          if (productId === i.productCartId) {
+            i.qty += 1;
+            axios
+              .put(
+                `/api/cart?qty=${i.qty}&price=${price}&idCartProduct=${productId}`
+              )
+              .then((res) => console.log(res.data));
+          }
+        }
+      });
     },
-    getters: {
-        PRODUCTS: state => state.products,
-        CART: state => state.cart
-    }
-})
+
+    // Уменьшение кол-ва товара в корзине
+    decrementQty(state, payloads) {
+      let { qty, productId, price } = payloads;
+      if (qty > 1) {
+        state.cart.map((i) => {
+          if (productId === i.productCartId) {
+            i.qty -= 1;
+            axios
+              .put(
+                `/api/cart?qty=${i.qty}&price=${price}&idCartProduct=${productId}`
+              )
+              .then((res) => console.log(res.data));
+          }
+        });
+      }
+    },
+  },
+  actions: {
+    // Получени из БД каталога товаров
+    async getAllProducts(context) {
+      const products = await axios.get("/api/products").then((res) => res.data);
+      context.commit("getAllProducts", products);
+    },
+
+    // Добавление товара в корзину
+    putProductToCart({ commit }, payloads) {
+      commit("putProductToCart", payloads);
+    },
+
+    // Удаление товара из корзины
+    removeProductFromCart({ commit }, payloads) {
+      commit("removeProductFromCart", payloads);
+    },
+
+    // Получение товаров из корзины БД
+    getCartProducts({ commit }) {
+      let cartProducts;
+      axios.get("/api/cart").then((res) => {
+        cartProducts = res.data;
+        commit("getCartProducts", cartProducts);
+      });
+    },
+
+    // Увеличение товара на 1
+    handleIncrementQty({ commit }, payloads) {
+      commit("incrementQty", payloads);
+    },
+
+    // Уменьшение товара на 1
+    handleDecrementQty({ commit }, payloads) {
+      commit("decrementQty", payloads);
+    },
+  },
+  getters: {
+    PRODUCTS: (state) => state.products,
+    CART: (state) => state.cart,
+  },
+});

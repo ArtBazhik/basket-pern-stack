@@ -10,7 +10,7 @@
           <router-link :to="{ name: 'Home' }">Каталог</router-link>
         </li>
         <li>
-          <router-link :to="{ name: 'Cart' }">Корзина <span>({{countProductsInCart}})</span></router-link>
+          <router-link :to="{ name: 'Cart' }">Корзина <span>({{getProductCart.length}})</span></router-link>
         </li>
       </ul>
     </div>
@@ -18,13 +18,24 @@
 </template>
 
 <script>
+import {computed} from 'vue'
+import store from '../../store/index'
 
 export default {
   name: "v-header",
   computed: {
-    countProductsInCart () {
-      return this.$store.getters.CART.length
+    getProductCart () {
+      return this.$store.getters.CART
     }
   }
+  // super() {
+  //   let cart = computed(() => {
+  //     return store.state.cart
+  //   })
+  //
+  //   return {
+  //     cart
+  //   }
+  // }
 };
 </script>
