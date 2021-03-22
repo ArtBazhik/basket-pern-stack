@@ -6,6 +6,7 @@ export default createStore({
   state: {
     products: [],
     cart: [],
+    discountProducts: [],
   },
   plugins: [createPersistedState()],
   mutations: {
@@ -41,6 +42,13 @@ export default createStore({
           axios.delete(`/api/cart?idCartProduct=${payloads}`).then();
         }
       });
+
+      // Удаление товара из хранилища скидочных товаров
+      state.discountProducts.map((el) => {
+        if (el.idCart === payloads) {
+          state.discountProducts.splice(el, 1);
+        }
+      });
     },
 
     getCartProducts(state, payloads) {},
@@ -56,7 +64,31 @@ export default createStore({
               .put(
                 `/api/cart?qty=${i.qty}&price=${price}&idCartProduct=${productId}`
               )
-              .then((res) => console.log(res.data));
+              .then((res) => {
+                let discountProducts;
+                state.products.map((item) => {
+                  if (item.id === res.data.product_id) {
+                    return (discountProducts = {
+                      ...res.data,
+                      name: item.name,
+                    });
+                  }
+                });
+                if (res.data) {
+                  if (state.discountProducts.length < 0) {
+                    console.log("No discount products");
+                  }
+                  console.log(res.data);
+                  state.discountProducts.push({
+                    idCart: discountProducts.id,
+                    name: discountProducts.name,
+                    qty: res.data.qty / 3,
+                    price: discountProducts.total_price / discountProducts.qty,
+                    discount: discountProducts.discount,
+                  });
+                  console.log(state.discountProducts);
+                }
+              });
           }
         }
       });
@@ -73,7 +105,9 @@ export default createStore({
               .put(
                 `/api/cart?qty=${i.qty}&price=${price}&idCartProduct=${productId}`
               )
-              .then((res) => console.log(res.data));
+              .then((res) => {
+                console.log(res.data);
+              });
           }
         });
       }
